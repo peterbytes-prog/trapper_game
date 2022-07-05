@@ -25,28 +25,44 @@ async def startGame(websocket):
     connected = set([websocket])
     game_id = secrets.token_urlsafe(32)
     JOINED[game_id] = [game, connected]
-    watch_id = secrets.token_urlsafe(32)
-    WATCH[watch_id] = [game, connected]
+    # watch_id = secrets.token_urlsafe(32)
+    # WATCH[watch_id] = [game, connected] # can only be watch if two player are playing
     player = player1
     try:
         event = {
             "type":"init",
             "player":player,
-            "join":game_id,
-            "watch":watch_id
+            "join":game_id
         }
         print(f"player one starting game {game_id}")
         await websocket.send(json.dumps(event))
-
+        updateConnected(websocket, game_id)
         await play(websocket, game, player, connected)
     finally:
         del JOINED[game_id]
+
+def updateConnected(websocket, game_id):
+    event = {
+        'type':'connection',
+        'joins':[i for i in JOINED if (len(JOINED[i][1])<2)],
+        'watches':[i for i in WATCH],
+        'watching':[id(i) for i in list(WATCH.get(game_id,[None,[]])[1])]
+    }
+    connections = [JOINED[i][1] for i in JOINED]
+    connections.extend([WATCH[i][1] for i in WATCH])
+    connections = set().union(*connections)
+    websockets.broadcast(connections, json.dumps(event))
 
 async def joinGame(websocket, join_id):
     game, connected = JOINED.get(join_id, (None,None))
     if game and connected:
         print(f"player two joining game: {join_id}")
+        if(len(connected)>=2):
+            await errorHandler(websocket, "Game not accepting new player.You are welcome to wacth!")
+            return await watch(websocket, join_id)#handle as a watcher
         connected.add(websocket)
+        watch_id = secrets.token_urlsafe(32)
+        WATCH[join_id] = [game, connected] # can only be watch if two player are playing
         player = player2
         try:
             event = {
@@ -54,7 +70,10 @@ async def joinGame(websocket, join_id):
                 "player":player
             }
             await websocket.send(json.dumps(event))
+
+            updateConnected(websocket, join_id)
             # send prev moves
+
             await replay(websocket, game)
             await play(websocket, game, player, connected)
         finally:
@@ -74,6 +93,7 @@ async def watch(websocket, watch_id):
                 "watch":watch_id
             }
             await websocket.send(json.dumps(event))
+            updateConnected(websocket, watch_id)
             await replay(websocket, game)
             await websocket.wait_closed()
         finally:
