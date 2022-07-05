@@ -1,3 +1,6 @@
 .DS_STORE
 */.DS_STORE
 */*/.DS_STORE
+
+__pycache__/
+app_venv/
