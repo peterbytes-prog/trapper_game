@@ -20,7 +20,7 @@ function showMessages(message, status=''){
 
 }
 window.addEventListener("DOMContentLoaded", async ()=>{
-
+  // $('.modal').modal()
   await setTimeout(async ()=>{
     const websocket = new WebSocket("ws:\\localhost:8001");
     initGame(websocket);

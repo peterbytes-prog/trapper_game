@@ -97,7 +97,7 @@ class GAME{
   }
 
   setPlayer(name){
-
+    return
     if(PLAYERS.length===0){
       this.player1 = new Player(this.board_template[0], color(0, 0, 0),name);
       PLAYERS.push(this.player1);
